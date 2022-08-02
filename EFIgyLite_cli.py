@@ -121,7 +121,7 @@ class EFIgyCli(object):
                         time.time()).replace(
                         ".", "_")))
                 self.log_fo = open(self.log_path, "wb")
-                self.message("Writing output log to %s" % (self.log_path))
+                self.message(f"Writing output log to {self.log_path}")
             except Exception as err:
                 sys.stderr.write(
                     "[!] Error opening specified log file at '%s' - %s" %
@@ -213,14 +213,12 @@ class EFIgyCli(object):
                 self.api_server + api_path, cafile=self.cacert_path)
             json_data = self.last_response.read()
 
-        # Check for errors
         except urllib2.HTTPError as err:
             error = "API HTTP error [%s] - '%s'" % (err.code, err.read())
             raise EFIgyCliError(error, self.last_response)
 
         except urllib2.URLError as err:
-            error = 'Problem calling API at location %s - %s' % (
-                self.api_server + api_path, err)
+            error = f'Problem calling API at location {self.api_server + api_path} - {err}'
             raise EFIgyCliError(error, self.last_response)
 
         # Decode json response into an object
@@ -249,14 +247,12 @@ class EFIgyCli(object):
             self.last_response = urllib2.urlopen(req, cafile=self.cacert_path)
             json_data = self.last_response.read()
 
-        # Check for errors
         except urllib2.HTTPError as err:
             error = "API HTTP error [%s] - '%s'" % (err.code, err)
             raise EFIgyCliError(error, err)
 
         except urllib2.URLError as err:
-            error = 'Problem calling API at location %s - %s' % (
-                self.api_server + api_path, err)
+            error = f'Problem calling API at location {self.api_server + api_path} - {err}'
             raise EFIgyCliError(error, self.last_response)
 
         # Decode json response into an object
@@ -293,17 +289,13 @@ class EFIgyCli(object):
                 (response["msg"], response["timestamp"]))
             return False
 
-        # Is this a valid response message
         if "msg" in response:
             return True
 
-        # Catch all...dictionary returned but does not contain expected keys?
-        # Who know's what's going on here?!
-        else:
-            self.message(
-                "\t\t[!] ERROR - Unexpected dictionary response returned from the API: '%s'" %
-                (response))
-            return False
+        self.message(
+            "\t\t[!] ERROR - Unexpected dictionary response returned from the API: '%s'" %
+            (response))
+        return False
 
     def _validate_json(self):
         """
@@ -317,11 +309,6 @@ class EFIgyCli(object):
 
         except Exception as err:
             raise
-            self.message(
-                "[-] Error reading JSON batch file '%s' : '%s'" %
-                (self.batch_json_path, err))
-            return False
-
         # Does the json represent a dictionary of the expected form?
         if not isinstance(batch_json, types.DictionaryType):
             self.message(
@@ -389,14 +376,9 @@ class EFIgyCli(object):
                     self.cleanup()
                     return False
 
-            # Not batch, use info from this system to send to API for EFI
-            # firmware check
-            else:
-                # Get the local system data to send to API to find out relevant
-                # EFI firmware info
-                if not self.gather_system_versions():
-                    self.cleanup()
-                    return False
+            elif not self.gather_system_versions():
+                self.cleanup()
+                return False
 
             # For either the local gathered sys-info or for each endpoint in the supplied batch file send up the relevant
             # info to  the API to you some answers
@@ -406,7 +388,7 @@ class EFIgyCli(object):
                 self.current_endpoint = endpoint
 
                 self.message("-" * self.term_width)
-                self.message("Endpoint: %s" % (self.current_endpoint))
+                self.message(f"Endpoint: {self.current_endpoint}")
                 self.message(
                     "\t# Enumerated system information (This data will be sent to the API in order to determine your correct EFI version):\n")
                 self.message(
@@ -421,9 +403,7 @@ class EFIgyCli(object):
                 # The SMC is built into the T2, so on Macs
                 # with that chip this will be empty.
                 smc_ver_str = sys_info.get("smc_ver")
-                self.message(
-                    "\tSMC Version      : %s" %
-                    (smc_ver_str if smc_ver_str else "N/A"))
+                self.message(("\tSMC Version      : %s" % (smc_ver_str or "N/A")))
                 self.message(
                     "\tBoard-ID         : %s" %
                     (sys_info.get("board_id")))
@@ -436,7 +416,7 @@ class EFIgyCli(object):
 
                 # If running in single system mode and we haven't been told to
                 # be silent ask if it's OK to send data
-                if not self.batch_json_path and not (self.quiet or self.yes):
+                if not self.batch_json_path and not self.quiet and not self.yes:
                     agree = raw_input(
                         "\n[?] Do you want to continue and submit this request? [Y/N]  ").upper()
                     if agree not in ["Y", "YES"]:
@@ -480,7 +460,7 @@ class EFIgyCli(object):
             return True
 
         except EFIgyCliError as err:
-            sys.stderr.write("%s" % (err))
+            sys.stderr.write(f"{err}")
 
     def gather_system_versions(self):
         """
@@ -520,8 +500,7 @@ class EFIgyCli(object):
                     "[-] Could not find raw EFI data to determine EFI versions. Exiting....")
                 return False
 
-            self.efi_version = "%s.%s.%s" % (
-                raw_efi_list[0], raw_efi_list[2], raw_efi_list[3])
+            self.efi_version = f"{raw_efi_list[0]}.{raw_efi_list[2]}.{raw_efi_list[3]}"
             # Can't currently find the SMC version like this on imac pros ....
             # self.smc_version = str(IORegistryEntryCreateCFProperty(IOServiceGetMatchingService(0, IOServiceMatching("AppleSMC")), "smc-version", None, 0))
             self.smc_version = ""
@@ -545,8 +524,7 @@ class EFIgyCli(object):
                     0)).replace(
                 "\x00",
                 "").split(".")
-            self.efi_version = "%s.%s.%s" % (
-                raw_efi[0], raw_efi[2], raw_efi[3])
+            self.efi_version = f"{raw_efi[0]}.{raw_efi[2]}.{raw_efi[3]}"
 
         # Set the salt to be the MAC address of the system, using the MAC as a salt in this manner
         # helps ensure that the hashed sysuuid is pseudonymous. We don't want to know the sysuuid's
@@ -608,14 +586,7 @@ class EFIgyCli(object):
         """
         endpoint = "/apple/oneshot"
 
-        # if not data_to_submit:
-        #     data_to_submit = {"hashed_uuid":self.h_sys_uuid, "hw_ver":self.hw_version, "rom_ver":self.efi_version,
-        #                       "smc_ver":self.smc_version, "board_id":self.board_id, "os_ver":self.os_version, "build_num":self.build_num}
-
-        # POST this data to the API to get relevant info back
-        result_dict = self.__make_api_post(endpoint, data=data_to_submit)
-
-        return result_dict
+        return self.__make_api_post(endpoint, data=data_to_submit)
 
     def check_highest_build(self, sys_info, api_results):
         """
@@ -623,8 +594,12 @@ class EFIgyCli(object):
         :return:
         """
         if not api_results.get("latest_build_number"):
-            self.results[self.current_endpoint]["latest_build_number"] = self.__make_api_get(
-                '/apple/latest_build_number/%s' % (".".join(sys_info.get("os_ver").split(".")[:2])))
+            self.results[self.current_endpoint][
+                "latest_build_number"
+            ] = self.__make_api_get(
+                f'/apple/latest_build_number/{".".join(sys_info.get("os_ver").split(".")[:2])}'
+            )
+
 
         self.message("\n\tHighest build number check:")
 
@@ -652,8 +627,12 @@ class EFIgyCli(object):
         Given your major OS version are you running the latest minor patch?
         """
         if not api_results.get("latest_os_version"):
-            self.results[self.current_endpoint]["latest_os_version"] = self.__make_api_get(
-                '/apple/latest_os_version/%s' % (".".join(sys_info.get("os_ver").split(".")[:2])))
+            self.results[self.current_endpoint][
+                "latest_os_version"
+            ] = self.__make_api_get(
+                f'/apple/latest_os_version/{".".join(sys_info.get("os_ver").split(".")[:2])}'
+            )
+
 
         self.message("\n\tUp-to-date OS check:")
 
@@ -662,18 +641,13 @@ class EFIgyCli(object):
 
             # Valid response from API - now interpret it
             my_os_ver_str = sys_info.get("os_ver").split(".")
-            my_os_ver_num = int(
-                "%s%s%s" %
-                (my_os_ver_str[0],
-                 my_os_ver_str[1],
-                 my_os_ver_str[2]))
+            my_os_ver_num = int(f"{my_os_ver_str[0]}{my_os_ver_str[1]}{my_os_ver_str[2]}")
 
             api_os_ver_str = api_results["latest_os_version"]["msg"].split(".")
             api_os_ver_num = int(
-                "%s%s%s" %
-                (api_os_ver_str[0],
-                 api_os_ver_str[1],
-                 api_os_ver_str[2]))
+                f"{api_os_ver_str[0]}{api_os_ver_str[1]}{api_os_ver_str[2]}"
+            )
+
 
             # if sys_info.get("os_ver") !=
             # api_results["latest_os_version"]["msg"]:
@@ -700,10 +674,12 @@ class EFIgyCli(object):
         if not api_results.get("efi_updates_released"):
             # Call the API to see what the latest version of EFI you are
             # expected to be running given OS ver and mac model
-            self.results[
-                self.current_endpoint]["efi_updates_released"] = self.__make_api_get(
-                '/apple/no_firmware_updates_released/%s' %
-                (sys_info.get("hw_ver")))
+            self.results[self.current_endpoint][
+                "efi_updates_released"
+            ] = self.__make_api_get(
+                f'/apple/no_firmware_updates_released/{sys_info.get("hw_ver")}'
+            )
+
 
         # Validate response from API
         if self._validate_response(api_results["efi_updates_released"]):
@@ -727,10 +703,12 @@ class EFIgyCli(object):
         if not api_results.get("latest_efi_version"):
             # Call the API to see what the latest version of EFI you are
             # expected to be running given OS ver and mac model
-            api_results[
-                self.current_endpoint]["latest_efi_version"] = self.__make_api_get(
-                '/apple/latest_efi_firmware/%s/%s' %
-                (sys_info.get("hw_ver"), sys_info.get("build_num")))
+            api_results[self.current_endpoint][
+                "latest_efi_version"
+            ] = self.__make_api_get(
+                f'/apple/latest_efi_firmware/{sys_info.get("hw_ver")}/{sys_info.get("build_num")}'
+            )
+
 
         self.message("\n\tEFI firmware version check:")
 
@@ -747,7 +725,7 @@ class EFIgyCli(object):
             api_efi_ver = int(api_efi_str[1], 16)
             api_efi_build = int(api_efi_str[2].replace("B", ""), 16)
 
-            if all([x.isdigit() for x in my_efi_str]):
+            if all(x.isdigit() for x in my_efi_str):
                 # Newer EFI versions do not include a build number
                 # or the Mac model code. The output will be something
                 # like 256.0.0, whereas with the old format it would
@@ -767,7 +745,11 @@ class EFIgyCli(object):
                     "\t\t[+] SUCCESS - The EFI Firmware you are running (%s) is the expected version for the OS build you have installed (%s) on your %s" %
                     (sys_info.get("rom_ver"), sys_info.get("build_num"), sys_info.get("hw_ver")))
 
-            elif (my_efi_ver > api_efi_ver) or (my_efi_ver > api_efi_ver and my_efi_build > api_efi_build) or (my_efi_ver == api_efi_ver and my_efi_build > api_efi_build):
+            elif (
+                my_efi_ver > api_efi_ver
+                or my_efi_ver == api_efi_ver
+                and my_efi_build > api_efi_build
+            ):
                 # Looks like you're running a beta or a dev build - pretty much
                 # all bets are off here as the dataset doens't cover dev builds
                 # but a nicer message makes sense
@@ -787,10 +769,9 @@ class EFIgyCli(object):
         """
 
         result_dict = self.__make_api_get(
-            "/apple/up2date/%s/%s/%s" %
-            (sys_info.get("hw_ver"),
-             sys_info.get("build_num"),
-             sys_info.get("rom_ver")))
+            f'/apple/up2date/{sys_info.get("hw_ver")}/{sys_info.get("build_num")}/{sys_info.get("rom_ver")}'
+        )
+
 
         if self._validate_response(result_dict):
 
@@ -854,13 +835,12 @@ class EFIgyCli(object):
         try:
             json.dump(self.results, json_results_fd)
         except Exception as err:
-            self.message(
-                "[-] Problem writing JSON output to %s : %s" %
-                (self.json_results, err))
+            self.message(f"[-] Problem writing JSON output to {self.json_results} : {err}")
 
         if self.json_results != "-":
-            self.message("[+] Written JSON results to %s" %
-                         (os.path.abspath(self.json_results)))
+            self.message(
+                f"[+] Written JSON results to {os.path.abspath(self.json_results)}"
+            )
 
     def cleanup(self):
         """
@@ -875,9 +855,10 @@ if __name__ == "__main__":
 
     # Process command line args
     parser = argparse.ArgumentParser(
-        description="%s v%s. App to assess Apple EFI firmware versions." %
-        (NAME, VERSION), epilog="Visit %s for more information." %
-        (CODE_URL))
+        description=f"{NAME} v{VERSION}. App to assess Apple EFI firmware versions.",
+        epilog=f"Visit {CODE_URL} for more information.",
+    )
+
     parser.add_argument(
         "-l",
         "--log",
@@ -935,7 +916,7 @@ if __name__ == "__main__":
         logger.setLevel(logging.DEBUG)
 
     if args.version:
-        print("%s %s" % (NAME, VERSION))
+        print(f"{NAME} {VERSION}")
         sys.exit(0)
 
     if args.quiet:
@@ -958,7 +939,7 @@ if __name__ == "__main__":
         sys.exit(0)
 
     except Exception as err:
-        print("[-] Fatal error in %s. Exiting....." % (NAME))
+        print(f"[-] Fatal error in {NAME}. Exiting.....")
         if args.debug:
             import traceback
             print("\nError:\n\t%s" % (err))
